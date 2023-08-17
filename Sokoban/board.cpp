@@ -2,28 +2,16 @@
 #include <iostream>
 #include <string>
 #include <iomanip>
+#include "vector2.h";
 
 using namespace std;
+int currentLevel[ROWS][COLS];
 
-int LEVEL_ONE[ROWS][COLS] = 
+vector2::Vector2 playerPosition, nextPosition, boxNextPosition, lastPosition;
+
+vector2::Vector2 board::generateBoard(int _level[ROWS][COLS])
 {
-    {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1},
-    {-1, 0, 0, 0, 0, 0, 0, 0, 0,-1},
-    {-1, 0, 0, 0, 0, 0, 0, 0, 0,-1},
-    {-1, 0, 0, 0, 0, 2, 0, 0, 0,-1},
-    {-1, 0, 0, 0, 0, 0, 0, 3, 0,-1},
-    {-1, 0, 0, 1, 0, 2, 0, 0, 0,-1},
-    {-1, 0, 0, 0, 0, 0, 0, 0, 0,-1},
-    {-1, 0, 0, 1, 0, 0, 0, 0, 0,-1},
-    {-1, 0, 0, 0, 0, 0, 0, 0, 0,-1},
-    {-1,-1,-1,-1,-1,-1,-1,-1,-1,-1}
-};
-
-vector2 playerPosition, nextPosition, lastPosition;
-
-vector2 board::generateBoard(int _level[ROWS][COLS])
-{
-    vector2 p;
+    vector2::Vector2 p{};
     for (int x = 0; x < COLS; x++)
     {
         for (int y = 0; y < ROWS; y++)
@@ -42,6 +30,17 @@ vector2 board::generateBoard(int _level[ROWS][COLS])
     return p;
 }
 
+void board::loadLevel(int _level[ROWS][COLS])
+{
+    for (int x = 0; x < COLS; x++)
+    {
+        for (int y = 0; y < ROWS; y++)
+        {
+            currentLevel[x][y] = _level[x][y];
+        }
+    }
+}
+
 char board::getPiece(int _pieceId)
 {
     type pieceType = (type)_pieceId;
@@ -55,7 +54,11 @@ char board::getPiece(int _pieceId)
         return 'x';
     case Box:
         return '@';
+    case BoxOnGoal:
+        return '@';
     case Player:
+        return 'P';
+    case PlayerOnGoal:
         return 'P';
     default:
         return 'E';
@@ -64,34 +67,54 @@ char board::getPiece(int _pieceId)
     return 'E';
 }
 
-bool board::moveUp()
+bool board::processMovement(vector2::Vector2 _position, vector2::Vector2 _currentPosition)
 {
-    // First we check to make sure there isnt a wall above us
-    // if we can move we then position the player to space,
-    // then remove the prievous position
-
-    lastPosition = playerPosition;
+    lastPosition = _currentPosition;
     nextPosition = lastPosition;
-    nextPosition.x -= 1;
 
-    if ((type)LEVEL_ONE[nextPosition.x][nextPosition.x] != Wall)
+    nextPosition.x += _position.x;
+    nextPosition.y += _position.y;
+    boxNextPosition = nextPosition;
+
+    boxNextPosition.x += _position.x;
+    boxNextPosition.y += _position.y;
+
+    type tileTypeNext = (type)currentLevel[nextPosition.x][nextPosition.y];
+    type tileTypeBoxNext = (type)currentLevel[boxNextPosition.x][boxNextPosition.y];
+    type tileTypeCurrent = (type)currentLevel[lastPosition.x][lastPosition.y];
+
+    if (tileTypeNext != Wall)
     {
-        LEVEL_ONE[nextPosition.x][nextPosition.y] = (int)Player;
-        LEVEL_ONE[lastPosition.x][lastPosition.y] = (int)Empty;
+        // We have a box infront of us, we should push it
+        // but it cannot move if there is a wall infront
+
+        // Handles Box Logic
+        if ((tileTypeNext == Box || tileTypeNext == BoxOnGoal) && tileTypeBoxNext != Wall)
+        {
+            if (tileTypeBoxNext == Goal) currentLevel[boxNextPosition.x][boxNextPosition.y] = (int)BoxOnGoal;
+            else currentLevel[boxNextPosition.x][boxNextPosition.y] = (int)Box;
+
+            if(tileTypeNext == BoxOnGoal || tileTypeNext == Goal) currentLevel[nextPosition.x][nextPosition.y] = (int)PlayerOnGoal;
+            else currentLevel[nextPosition.x][nextPosition.y] = (int)Player;
+            
+            if(tileTypeCurrent == BoxOnGoal || tileTypeCurrent == PlayerOnGoal) currentLevel[lastPosition.x][lastPosition.y] = (int)Goal;
+            else currentLevel[lastPosition.x][lastPosition.y] = (int)Empty;
+        }
+        else if (tileTypeNext != Box)
+        {
+            if (tileTypeNext == BoxOnGoal || tileTypeNext == Goal) currentLevel[nextPosition.x][nextPosition.y] = (int)PlayerOnGoal;
+            else currentLevel[nextPosition.x][nextPosition.y] = (int)Player;
+
+            if (tileTypeCurrent == BoxOnGoal || tileTypeCurrent == PlayerOnGoal) currentLevel[lastPosition.x][lastPosition.y] = (int)Goal;
+            else currentLevel[lastPosition.x][lastPosition.y] = (int)Empty;
+        }
+
         return true;
     }
     else return false;
 }
 
-void board::displayBoard()
+vector2::Vector2 board::displayBoard()
 {
-    playerPosition = generateBoard(LEVEL_ONE);
-    bool canMove;
-    do
-    {
-        cout << "\n\n";
-        canMove = moveUp();
-        if(canMove) playerPosition = generateBoard(LEVEL_ONE);
-    } 
-    while (canMove);
+    return generateBoard(currentLevel);
 }

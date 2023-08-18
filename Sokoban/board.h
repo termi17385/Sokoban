@@ -25,10 +25,12 @@ enum type : int
 class board
 {
 private:
-    vector2::Vector2 generateBoard(int _level[ROWS][COLS]);
+    vector2::Vector2 generateBoard(int _level[ROWS][COLS], bool _ruleValidation = false);
     char getPiece(int _pieceId);
+    void playerMovement(vector2::Vector2 _nextPosition, vector2::Vector2 _lastPosition);
+
 public:
-    vector2::Vector2 displayBoard();
+    vector2::Vector2 displayBoard(bool);
     bool processMovement(vector2::Vector2 _position, vector2::Vector2 _currentPosition);
     void loadLevel(int _level[ROWS][COLS]);
 };
